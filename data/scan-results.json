@@ -1,0 +1,110 @@
+[
+  {
+    "id": "CVE-2026-27205",
+    "package": "flask",
+    "version": "2.3.3",
+    "fixVersion": "2.3.4",
+    "severity": "high",
+    "cve": "CVE-2026-27205",
+    "title": "Session cookie Vary header not set correctly",
+    "description": "When the session object is accessed, Flask should set the Vary: Cookie header to prevent caching issues that could leak session data across users.",
+    "ecosystem": "python",
+    "fixAvailable": true
+  },
+  {
+    "id": "PYSEC-2026-175",
+    "package": "pyjwt",
+    "version": "2.12.0",
+    "fixVersion": "2.13.0",
+    "severity": "high",
+    "cve": "PYSEC-2026-175",
+    "title": "JWT validation bypass via algorithm confusion",
+    "description": "PyJWT prior to 2.13.0 allows attackers to bypass JWT validation through algorithm confusion when asymmetric keys are used.",
+    "ecosystem": "python",
+    "fixAvailable": true
+  },
+  {
+    "id": "PYSEC-2026-176",
+    "package": "pyjwt",
+    "version": "2.12.0",
+    "fixVersion": "2.13.0",
+    "severity": "high",
+    "cve": "PYSEC-2026-176",
+    "title": "JWT key handling vulnerability allows key reuse attacks",
+    "description": "PyJWT from 2.9.0 to 2.12 allows key reuse attacks when HMAC and RSA keys are mixed in multi-tenant environments.",
+    "ecosystem": "python",
+    "fixAvailable": true
+  },
+  {
+    "id": "PYSEC-2026-177",
+    "package": "pyjwt",
+    "version": "2.12.0",
+    "fixVersion": "2.13.0",
+    "severity": "high",
+    "cve": "PYSEC-2026-177",
+    "title": "JWT claim validation can be bypassed with crafted tokens",
+    "description": "PyJWT prior to 2.13.0 does not properly validate required claims, allowing tokens with missing claims to pass validation.",
+    "ecosystem": "python",
+    "fixAvailable": true
+  },
+  {
+    "id": "PYSEC-2026-178",
+    "package": "pyjwt",
+    "version": "2.12.0",
+    "fixVersion": "2.13.0",
+    "severity": "high",
+    "cve": "PYSEC-2026-178",
+    "title": "JWT token parsing allows header injection",
+    "description": "PyJWT from 2.8.0 to 2.12 allows header injection through specially crafted JWK sets, potentially leading to token forgery.",
+    "ecosystem": "python",
+    "fixAvailable": true
+  },
+  {
+    "id": "PYSEC-2026-179",
+    "package": "pyjwt",
+    "version": "2.12.0",
+    "fixVersion": "2.13.0",
+    "severity": "high",
+    "cve": "PYSEC-2026-179",
+    "title": "JWT token verification timing attack on HMAC signatures",
+    "description": "PyJWT prior to 2.13.0 uses non-constant-time comparison for HMAC signature verification, enabling timing-based attacks.",
+    "ecosystem": "python",
+    "fixAvailable": true
+  },
+  {
+    "id": "CVE-2026-44405",
+    "package": "paramiko",
+    "version": "3.5.1",
+    "fixVersion": null,
+    "severity": "moderate",
+    "cve": "CVE-2026-44405",
+    "title": "SHA-1 RSA signature algorithm still accepted by default",
+    "description": "Paramiko through 4.0.0 allows the SHA-1 algorithm for RSA signatures, which is considered weak and could be exploited in MITM attacks.",
+    "ecosystem": "python",
+    "fixAvailable": false
+  },
+  {
+    "id": "PYSEC-2026-113",
+    "package": "pyarrow",
+    "version": "20.0.0",
+    "fixVersion": "20.0.1",
+    "severity": "high",
+    "cve": "PYSEC-2026-113",
+    "title": "Use-after-free in Apache Arrow C++ IPC reader",
+    "description": "Use After Free vulnerability in Apache Arrow C++ allows crafted IPC messages to cause memory corruption and potential code execution.",
+    "ecosystem": "python",
+    "fixAvailable": true
+  },
+  {
+    "id": "GHSA-eslint-i18n",
+    "package": "eslint-plugin-i18n-strings",
+    "version": "*",
+    "fixVersion": null,
+    "severity": "critical",
+    "cve": "GHSA-eslint-i18n-strings",
+    "title": "Malware in eslint-plugin-i18n-strings",
+    "description": "The eslint-plugin-i18n-strings package contains malicious code that exfiltrates environment variables and credentials.",
+    "ecosystem": "javascript",
+    "fixAvailable": false
+  }
+]

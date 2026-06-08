@@ -1,0 +1,18 @@
+{
+  "name": "devin-security-autopilot",
+  "version": "1.0.0",
+  "description": "Event-driven security remediation pipeline powered by Devin AI",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "demo": "DEMO_MODE=true node src/index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "@octokit/rest": "^21.0.0",
+    "pptxgenjs": "^3.12.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Devin Security Autopilot — Trust Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #050508;
+    --surface: #0f1117;
+    --surface-2: #181b24;
+    --border: #242833;
+    --text: #e2e4ea;
+    --text-dim: #8b8fa3;
+    --accent: #3b82f6;
+    --accent-glow: rgba(59, 130, 246, 0.15);
+    --success: #22c55e;
+    --success-dim: rgba(34, 197, 94, 0.12);
+    --warning: #f59e0b;
+    --warning-dim: rgba(245, 158, 11, 0.12);
+    --danger: #ef4444;
+    --danger-dim: rgba(239, 68, 68, 0.12);
+    --critical-bg: #2d1215;
+    --high-bg: #2d1f0f;
+    --moderate-bg: #2d2a0f;
+    --low-bg: #0f2d16;
+    --font: 'Inter', system-ui, -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --radius: 12px;
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Header */
+  .header {
+    padding: 24px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(59,130,246,0.03) 0%, transparent 100%);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .logo {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 18px;
+    color: white;
+    box-shadow: 0 0 20px rgba(59,130,246,0.3);
+  }
+
+  .header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .header h1 span {
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+
+  .pipeline-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .pipeline-badge.idle { background: var(--surface-2); color: var(--text-dim); }
+  .pipeline-badge.running { background: var(--accent-glow); color: var(--accent); }
+  .pipeline-badge.completed { background: var(--success-dim); color: var(--success); }
+
+  .pipeline-badge .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .pipeline-badge.running .dot {
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .refresh-indicator {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+  }
+
+  /* Main grid */
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* Metric cards */
+  .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+  }
+
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+
+  .metric-card.found::before { background: var(--danger); }
+  .metric-card.fixed::before { background: var(--success); }
+  .metric-card.progress::before { background: var(--accent); }
+  .metric-card.failed::before { background: var(--warning); }
+  .metric-card.rate::before { background: linear-gradient(90deg, var(--accent), var(--success)); }
+
+  .metric-label {
+    font-size: 13px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+
+  .metric-value {
+    font-size: 36px;
+    font-weight: 800;
+    font-family: var(--mono);
+    line-height: 1;
+  }
+
+  .metric-card.found .metric-value { color: var(--danger); }
+  .metric-card.fixed .metric-value { color: var(--success); }
+  .metric-card.progress .metric-value { color: var(--accent); }
+  .metric-card.failed .metric-value { color: var(--warning); }
+  .metric-card.rate .metric-value { color: var(--success); }
+
+  .metric-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    font-family: var(--mono);
+  }
+
+  /* Progress bar */
+  .progress-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+  }
+
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .progress-header h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .progress-header .progress-text {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--text);
+  }
+
+  .progress-bar-track {
+    height: 10px;
+    background: var(--surface-2);
+    border-radius: 5px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 5px;
+    background: linear-gradient(90deg, var(--accent), var(--success));
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    box-shadow: 0 0 12px rgba(34, 197, 94, 0.3);
+  }
+
+  .progress-bar-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  /* Two-column layout */
+  .content-grid {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 24px;
+  }
+
+  /* Vulnerability table */
+  .table-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .table-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .table-header h2 {
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead th {
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+    font-weight: 600;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.2s;
+  }
+
+  tbody tr:hover {
+    background: rgba(59, 130, 246, 0.04);
+  }
+
+  tbody tr.just-updated {
+    animation: rowFlash 1s ease-out;
+  }
+
+  @keyframes rowFlash {
+    0% { background: rgba(59, 130, 246, 0.12); }
+    100% { background: transparent; }
+  }
+
+  tbody td {
+    padding: 12px 16px;
+    font-size: 13px;
+    vertical-align: middle;
+  }
+
+  /* Badges */
+  .severity-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .severity-badge.critical { background: var(--critical-bg); color: #f87171; }
+  .severity-badge.high { background: var(--high-bg); color: #fb923c; }
+  .severity-badge.moderate { background: var(--moderate-bg); color: #fbbf24; }
+  .severity-badge.low { background: var(--low-bg); color: #4ade80; }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .status-badge.queued { background: var(--surface-2); color: var(--text-dim); }
+  .status-badge.in_progress { background: var(--accent-glow); color: var(--accent); }
+  .status-badge.fixed { background: var(--success-dim); color: var(--success); }
+  .status-badge.failed { background: var(--danger-dim); color: var(--danger); }
+
+  .status-badge.in_progress::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 1.5s infinite;
+  }
+
+  td a {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 12px;
+    font-family: var(--mono);
+  }
+
+  td a:hover { text-decoration: underline; }
+
+  .package-name {
+    font-family: var(--mono);
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .package-version {
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  .time-elapsed {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  /* Sidebar */
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .sidebar-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+
+  .sidebar-card h3 {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+  }
+
+  /* Timeline */
+  .timeline-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .timeline-item {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .timeline-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+    background: var(--surface-2);
+  }
+
+  .timeline-content {
+    flex: 1;
+  }
+
+  .timeline-content p {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .timeline-content .time {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    margin-top: 2px;
+  }
+
+  /* Cost analysis */
+  .cost-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .cost-item {
+    text-align: center;
+    padding: 12px;
+    background: var(--surface-2);
+    border-radius: 8px;
+  }
+
+  .cost-item .value {
+    font-size: 22px;
+    font-weight: 700;
+    font-family: var(--mono);
+  }
+
+  .cost-item .label {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  .cost-item.highlight .value {
+    color: var(--success);
+    font-size: 28px;
+  }
+
+  .roi-bar {
+    margin-top: 16px;
+    padding: 16px;
+    background: linear-gradient(135deg, rgba(34,197,94,0.08), rgba(59,130,246,0.08));
+    border: 1px solid rgba(34,197,94,0.2);
+    border-radius: 10px;
+    text-align: center;
+  }
+
+  .roi-bar .roi-value {
+    font-size: 42px;
+    font-weight: 800;
+    font-family: var(--mono);
+    color: var(--success);
+    line-height: 1;
+    text-shadow: 0 0 30px rgba(34,197,94,0.3);
+  }
+
+  .roi-bar .roi-label {
+    font-size: 12px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 4px;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-dim);
+    font-size: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .footer a { color: var(--accent); text-decoration: none; }
+
+  /* Responsive */
+  @media (max-width: 1200px) {
+    .content-grid { grid-template-columns: 1fr; }
+    .metrics-row { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  @media (max-width: 768px) {
+    .metrics-row { grid-template-columns: repeat(2, 1fr); }
+    .container { padding: 16px; }
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">D</div>
+    <h1>Security Autopilot <span>by Devin</span></h1>
+  </div>
+  <div class="header-right">
+    <div class="refresh-indicator" id="refreshIndicator">Updating...</div>
+    <div class="pipeline-badge idle" id="pipelineBadge">
+      <div class="dot"></div>
+      <span id="pipelineStatus">Idle</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <!-- Metrics -->
+  <div class="metrics-row">
+    <div class="metric-card found">
+      <div class="metric-label">Vulnerabilities Found</div>
+      <div class="metric-value" id="metricFound">0</div>
+      <div class="metric-sub" id="metricFoundSub">-</div>
+    </div>
+    <div class="metric-card fixed">
+      <div class="metric-label">Fixed</div>
+      <div class="metric-value" id="metricFixed">0</div>
+      <div class="metric-sub">PRs opened</div>
+    </div>
+    <div class="metric-card progress">
+      <div class="metric-label">In Progress</div>
+      <div class="metric-value" id="metricInProgress">0</div>
+      <div class="metric-sub">Devin sessions active</div>
+    </div>
+    <div class="metric-card failed">
+      <div class="metric-label">Failed</div>
+      <div class="metric-value" id="metricFailed">0</div>
+      <div class="metric-sub">Manual review needed</div>
+    </div>
+    <div class="metric-card rate">
+      <div class="metric-label">Success Rate</div>
+      <div class="metric-value" id="metricRate">-</div>
+      <div class="metric-sub">automated fixes</div>
+    </div>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="progress-section">
+    <div class="progress-header">
+      <h3>Remediation Progress</h3>
+      <span class="progress-text" id="progressText">0 / 0 vulnerabilities remediated</span>
+    </div>
+    <div class="progress-bar-track">
+      <div class="progress-bar-fill" id="progressBar" style="width: 0%"></div>
+    </div>
+  </div>
+
+  <!-- Content grid -->
+  <div class="content-grid">
+    <!-- Vulnerability table -->
+    <div class="table-section">
+      <div class="table-header">
+        <h2>Vulnerability Status</h2>
+        <span style="font-size:12px;color:var(--text-dim)" id="tableCount">0 items</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Severity</th>
+            <th>Package</th>
+            <th>CVE</th>
+            <th>Status</th>
+            <th>Session</th>
+            <th>PR</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody id="vulnTable"></tbody>
+      </table>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <!-- Cost analysis -->
+      <div class="sidebar-card">
+        <h3>Cost Analysis</h3>
+        <div class="cost-grid">
+          <div class="cost-item">
+            <div class="value" id="costAcus">0</div>
+            <div class="label">ACUs Used</div>
+          </div>
+          <div class="cost-item">
+            <div class="value" id="costEngHours">0h</div>
+            <div class="label">Engineer Hours Saved</div>
+          </div>
+          <div class="cost-item">
+            <div class="value" id="costManual">$0</div>
+            <div class="label">Manual Fix Cost</div>
+          </div>
+          <div class="cost-item">
+            <div class="value" style="color:var(--success)" id="costDevin">$0</div>
+            <div class="label">Devin Cost</div>
+          </div>
+        </div>
+        <div class="roi-bar">
+          <div class="roi-value" id="roiValue">-</div>
+          <div class="roi-label">Return on Investment</div>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="sidebar-card">
+        <h3>Activity Timeline</h3>
+        <div class="timeline-list" id="timeline"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  Powered by <a href="https://devin.ai" target="_blank">Devin</a> &mdash; Cognition AI &nbsp;|&nbsp; Auto-refreshing every 5s
+</div>
+
+<script>
+const POLL_INTERVAL = 5000;
+let previousStatuses = {};
+
+async function fetchStatus() {
+  try {
+    const res = await fetch('/api/status');
+    const data = await res.json();
+    updateDashboard(data);
+    document.getElementById('refreshIndicator').textContent =
+      'Updated ' + new Date().toLocaleTimeString();
+  } catch (e) {
+    document.getElementById('refreshIndicator').textContent = 'Connection error';
+  }
+}
+
+function updateDashboard(data) {
+  // Pipeline status
+  const badge = document.getElementById('pipelineBadge');
+  const statusText = document.getElementById('pipelineStatus');
+  badge.className = 'pipeline-badge ' + (data.pipeline?.status || 'idle');
+  statusText.textContent = capitalize(data.pipeline?.status || 'idle');
+
+  // Metrics
+  const total = data.scan?.total || 0;
+  const fixed = data.remediation?.fixed || 0;
+  const inProgress = data.remediation?.inProgress || 0;
+  const failed = data.remediation?.failed || 0;
+  const queued = data.remediation?.queued || 0;
+  const done = fixed + failed;
+  const rate = done > 0 ? Math.round((fixed / done) * 100) + '%' : '-';
+
+  animateNumber('metricFound', total);
+  animateNumber('metricFixed', fixed);
+  animateNumber('metricInProgress', inProgress);
+  animateNumber('metricFailed', failed);
+  document.getElementById('metricRate').textContent = rate;
+
+  const critCount = data.scan?.critical || 0;
+  const highCount = data.scan?.high || 0;
+  document.getElementById('metricFoundSub').textContent =
+    `${critCount} critical, ${highCount} high`;
+
+  // Progress bar
+  const progress = total > 0 ? Math.round((fixed / total) * 100) : 0;
+  document.getElementById('progressBar').style.width = progress + '%';
+  document.getElementById('progressText').textContent =
+    `${fixed} / ${total} vulnerabilities remediated`;
+
+  // Table
+  updateTable(data.vulnerabilities || []);
+  document.getElementById('tableCount').textContent =
+    `${total} items`;
+
+  // Cost
+  const cost = data.cost || {};
+  document.getElementById('costAcus').textContent =
+    (cost.totalAcus || 0).toFixed(1);
+  document.getElementById('costEngHours').textContent =
+    (cost.estimatedEngineerHours || 0) + 'h';
+  document.getElementById('costManual').textContent =
+    '$' + (cost.estimatedEngineerCost || 0).toLocaleString();
+  document.getElementById('costDevin').textContent =
+    '$' + Math.round((cost.totalAcus || 0) * 3).toLocaleString();
+  document.getElementById('roiValue').textContent =
+    (cost.roiPercentage || 0) > 0 ? cost.roiPercentage + '%' : '-';
+
+  // Timeline
+  updateTimeline(data.timeline || []);
+}
+
+function updateTable(vulns) {
+  const tbody = document.getElementById('vulnTable');
+  const rows = vulns.map(v => {
+    const prevStatus = previousStatuses[v.id];
+    const changed = prevStatus && prevStatus !== v.status;
+    previousStatuses[v.id] = v.status;
+
+    const elapsed = v.startedAt
+      ? formatElapsed(new Date(v.startedAt), v.completedAt ? new Date(v.completedAt) : new Date())
+      : '-';
+
+    const sessionLink = v.sessionUrl
+      ? `<a href="${v.sessionUrl}" target="_blank">View</a>`
+      : '<span style="color:var(--text-dim)">-</span>';
+
+    const prLink = v.prUrl
+      ? `<a href="${v.prUrl}" target="_blank">View PR</a>`
+      : '<span style="color:var(--text-dim)">-</span>';
+
+    return `<tr class="${changed ? 'just-updated' : ''}">
+      <td><span class="severity-badge ${v.severity}">${v.severity}</span></td>
+      <td><span class="package-name">${v.package}</span> <span class="package-version">${v.version}</span></td>
+      <td><span style="font-family:var(--mono);font-size:12px">${v.cve}</span></td>
+      <td><span class="status-badge ${v.status}">${formatStatus(v.status)}</span></td>
+      <td>${sessionLink}</td>
+      <td>${prLink}</td>
+      <td><span class="time-elapsed">${elapsed}</span></td>
+    </tr>`;
+  });
+
+  tbody.innerHTML = rows.join('');
+}
+
+function updateTimeline(events) {
+  const container = document.getElementById('timeline');
+  const icons = {
+    scan_started: '&#128269;',
+    scan_complete: '&#128203;',
+    issues_created: '&#128221;',
+    remediation_started: '&#128640;',
+    session_started: '&#129302;',
+    session_complete: '&#9989;',
+    session_failed: '&#10060;',
+    pipeline_complete: '&#127881;',
+    pipeline_started: '&#128640;'
+  };
+
+  const items = events.slice(-15).reverse().map(e => {
+    const icon = icons[e.event] || '&#128204;';
+    const msg = formatTimelineEvent(e);
+    const time = e.timestamp ? timeAgo(new Date(e.timestamp)) : '';
+
+    return `<div class="timeline-item">
+      <div class="timeline-icon">${icon}</div>
+      <div class="timeline-content">
+        <p>${msg}</p>
+        <div class="time">${time}</div>
+      </div>
+    </div>`;
+  });
+
+  container.innerHTML = items.join('') || '<p style="color:var(--text-dim);font-size:13px">No events yet</p>';
+}
+
+function formatTimelineEvent(e) {
+  switch (e.event) {
+    case 'scan_started': return 'Security scan initiated';
+    case 'scan_complete': return `Scan complete &mdash; ${e.count || 0} vulnerabilities found`;
+    case 'issues_created': return `${e.count || 0} GitHub issues created`;
+    case 'remediation_started': return `Remediation started for ${e.count || 0} vulnerabilities`;
+    case 'session_started': return `Devin session started for <strong>${e.cve || ''}</strong>`;
+    case 'session_complete': return `<strong>${e.cve || ''}</strong> fixed${e.prUrl ? ' &mdash; <a href="' + e.prUrl + '" target="_blank">PR</a>' : ''}`;
+    case 'session_failed': return `<strong>${e.cve || ''}</strong> failed${e.reason ? ': ' + e.reason : ''}`;
+    case 'pipeline_complete': return `Pipeline complete! ${e.fixed || 0}/${e.total || 0} fixed (${e.successRate || 0}%)`;
+    default: return e.event;
+  }
+}
+
+function formatStatus(status) {
+  const map = {
+    queued: 'Queued',
+    in_progress: 'Running',
+    fixed: 'Fixed',
+    failed: 'Failed'
+  };
+  return map[status] || status;
+}
+
+function formatElapsed(start, end) {
+  const diff = Math.floor((end - start) / 1000);
+  if (diff < 60) return diff + 's';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ' + (diff % 60) + 's';
+  return Math.floor(diff / 3600) + 'h ' + Math.floor((diff % 3600) / 60) + 'm';
+}
+
+function timeAgo(date) {
+  const diff = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (diff < 5) return 'just now';
+  if (diff < 60) return diff + 's ago';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  return Math.floor(diff / 3600) + 'h ago';
+}
+
+function capitalize(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function animateNumber(id, target) {
+  const el = document.getElementById(id);
+  const current = parseInt(el.textContent) || 0;
+  if (current === target) return;
+  el.textContent = target;
+}
+
+// Start polling
+fetchStatus();
+setInterval(fetchStatus, POLL_INTERVAL);
+</script>
+</body>
+</html>
