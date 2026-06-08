@@ -7,6 +7,23 @@ const { recalculate } = require('./cost-tracker');
 
 const router = express.Router();
 
+// Auth middleware for mutation endpoints (live mode only)
+function requireAuth(req, res, next) {
+  if (process.env.DEMO_MODE === 'true') return next();
+
+  const apiKey = process.env.API_SECRET;
+  if (!apiKey) return next(); // No secret configured = open access (local dev)
+
+  const provided = req.headers['x-api-key'] || req.query.key;
+  if (provided !== apiKey) {
+    return res.status(401).json({ error: 'Unauthorized — set x-api-key header' });
+  }
+  next();
+}
+
+// Remediation lock to prevent double-trigger
+let remediationRunning = false;
+
 // GET /api/status — full pipeline state
 router.get('/status', (req, res) => {
   const state = db.getState();
@@ -15,7 +32,7 @@ router.get('/status', (req, res) => {
 });
 
 // POST /api/scan — trigger vulnerability scan
-router.post('/scan', async (req, res) => {
+router.post('/scan', requireAuth, async (req, res) => {
   const isDemo = process.env.DEMO_MODE === 'true';
 
   if (isDemo) {
@@ -55,11 +72,16 @@ router.post('/scan', async (req, res) => {
 });
 
 // POST /api/remediate — trigger Devin sessions
-router.post('/remediate', async (req, res) => {
+router.post('/remediate', requireAuth, async (req, res) => {
   const isDemo = process.env.DEMO_MODE === 'true';
 
   if (isDemo) {
     res.json({ status: 'demo_mode', message: 'Demo remediation running' });
+    return;
+  }
+
+  if (remediationRunning) {
+    res.json({ status: 'error', message: 'Remediation already in progress' });
     return;
   }
 
@@ -69,11 +91,14 @@ router.post('/remediate', async (req, res) => {
     return;
   }
 
+  remediationRunning = true;
   res.json({ status: 'started', message: 'Remediation initiated' });
 
   // Run async
   remediate(state.vulnerabilities).catch(e => {
     console.error('Remediation failed:', e.message);
+  }).finally(() => {
+    remediationRunning = false;
   });
 });
 

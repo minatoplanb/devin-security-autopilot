@@ -670,6 +670,25 @@
 const POLL_INTERVAL = 5000;
 let previousStatuses = {};
 
+// Escape HTML to prevent XSS from API data
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// Validate URL is safe (only http/https + expected domains)
+function safeUrl(url) {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
+    const allowed = ['github.com', 'app.devin.ai'];
+    if (!allowed.some(d => u.hostname === d || u.hostname.endsWith('.' + d))) return null;
+    return u.href;
+  } catch { return null; }
+}
+
 async function fetchStatus() {
   try {
     const res = await fetch('/api/status');
@@ -748,22 +767,27 @@ function updateTable(vulns) {
       ? formatElapsed(new Date(v.startedAt), v.completedAt ? new Date(v.completedAt) : new Date())
       : '-';
 
-    const sessionLink = v.sessionUrl
-      ? `<a href="${v.sessionUrl}" target="_blank">View</a>`
+    const sessionHref = safeUrl(v.sessionUrl);
+    const sessionLink = sessionHref
+      ? `<a href="${esc(sessionHref)}" target="_blank" rel="noopener">View</a>`
       : '<span style="color:var(--text-dim)">-</span>';
 
-    const prLink = v.prUrl
-      ? `<a href="${v.prUrl}" target="_blank">View PR</a>`
+    const prHref = safeUrl(v.prUrl);
+    const prLink = prHref
+      ? `<a href="${esc(prHref)}" target="_blank" rel="noopener">View PR</a>`
       : '<span style="color:var(--text-dim)">-</span>';
+
+    const sevClass = esc(v.severity);
+    const statusClass = esc(v.status);
 
     return `<tr class="${changed ? 'just-updated' : ''}">
-      <td><span class="severity-badge ${v.severity}">${v.severity}</span></td>
-      <td><span class="package-name">${v.package}</span> <span class="package-version">${v.version}</span></td>
-      <td><span style="font-family:var(--mono);font-size:12px">${v.cve}</span></td>
-      <td><span class="status-badge ${v.status}">${formatStatus(v.status)}</span></td>
+      <td><span class="severity-badge ${sevClass}">${esc(v.severity)}</span></td>
+      <td><span class="package-name">${esc(v.package)}</span> <span class="package-version">${esc(v.version)}</span></td>
+      <td><span style="font-family:var(--mono);font-size:12px">${esc(v.cve)}</span></td>
+      <td><span class="status-badge ${statusClass}">${esc(formatStatus(v.status))}</span></td>
       <td>${sessionLink}</td>
       <td>${prLink}</td>
-      <td><span class="time-elapsed">${elapsed}</span></td>
+      <td><span class="time-elapsed">${esc(elapsed)}</span></td>
     </tr>`;
   });
 
@@ -787,7 +811,7 @@ function updateTimeline(events) {
   const items = events.slice(-15).reverse().map(e => {
     const icon = icons[e.event] || '&#128204;';
     const msg = formatTimelineEvent(e);
-    const time = e.timestamp ? timeAgo(new Date(e.timestamp)) : '';
+    const time = e.timestamp ? esc(timeAgo(new Date(e.timestamp))) : '';
 
     return `<div class="timeline-item">
       <div class="timeline-icon">${icon}</div>
@@ -802,16 +826,19 @@ function updateTimeline(events) {
 }
 
 function formatTimelineEvent(e) {
+  const cve = esc(e.cve || '');
+  const prHref = safeUrl(e.prUrl);
+  const prTag = prHref ? ` &mdash; <a href="${esc(prHref)}" target="_blank" rel="noopener">PR</a>` : '';
   switch (e.event) {
     case 'scan_started': return 'Security scan initiated';
-    case 'scan_complete': return `Scan complete &mdash; ${e.count || 0} vulnerabilities found`;
-    case 'issues_created': return `${e.count || 0} GitHub issues created`;
-    case 'remediation_started': return `Remediation started for ${e.count || 0} vulnerabilities`;
-    case 'session_started': return `Devin session started for <strong>${e.cve || ''}</strong>`;
-    case 'session_complete': return `<strong>${e.cve || ''}</strong> fixed${e.prUrl ? ' &mdash; <a href="' + e.prUrl + '" target="_blank">PR</a>' : ''}`;
-    case 'session_failed': return `<strong>${e.cve || ''}</strong> failed${e.reason ? ': ' + e.reason : ''}`;
-    case 'pipeline_complete': return `Pipeline complete! ${e.fixed || 0}/${e.total || 0} fixed (${e.successRate || 0}%)`;
-    default: return e.event;
+    case 'scan_complete': return `Scan complete &mdash; ${parseInt(e.count)||0} vulnerabilities found`;
+    case 'issues_created': return `${parseInt(e.count)||0} GitHub issues created`;
+    case 'remediation_started': return `Remediation started for ${parseInt(e.count)||0} vulnerabilities`;
+    case 'session_started': return `Devin session started for <strong>${cve}</strong>`;
+    case 'session_complete': return `<strong>${cve}</strong> fixed${prTag}`;
+    case 'session_failed': return `<strong>${cve}</strong> failed${e.reason ? ': ' + esc(e.reason) : ''}`;
+    case 'pipeline_complete': return `Pipeline complete! ${parseInt(e.fixed)||0}/${parseInt(e.total)||0} fixed (${parseInt(e.successRate)||0}%)`;
+    default: return esc(e.event);
   }
 }
 
