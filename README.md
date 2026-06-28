@@ -168,4 +168,34 @@ Configure multiple repositories by extending the scanner to accept a list of rep
 
 ---
 
-Built by [David Hsu](https://github.com/minatoplanb) as a Devin Deployed Engineer take-home demonstration.
+## For Interview Candidates
+
+This repo was built as a take-home assignment for the **Devin Deployed Engineer** role at [Cognition](https://cognition.ai). I'm publishing it as a reference for future candidates.
+
+### What the assignment asks
+You're given access to the Devin API and asked to build something that demonstrates Devin's capabilities in a real-world workflow. There is no single "correct" answer — it's open-ended. This repo chose **automated security vulnerability remediation** as the use case.
+
+### Time budget
+The assignment is designed to be completed in a few days. This implementation took roughly **2 days of focused work** using Claude Code as a pair programmer. Budget time for:
+- Understanding the Devin API (v3 REST API — sessions, commands, polling)
+- Building something demo-worthy with a visual component (dashboard, report, etc.)
+- Writing clear documentation
+
+### Tips
+- **Demo mode is key** — Reviewers may not have all the API keys to run your project live. Build a demo mode that showcases the full flow without external dependencies.
+- **Show, don't tell** — A real-time dashboard or visual output is more compelling than CLI logs.
+- **Real data matters** — Use genuine vulnerabilities/issues, not toy examples.
+- **Think about trust** — The role is about deploying Devin to enterprise customers. Show you understand observability, cost tracking, and failure handling.
+
+### Architecture decisions
+If you're looking for inspiration, here's why this repo is structured the way it is:
+- **Event-driven pipeline** (scan → issues → sessions → PRs) mirrors how enterprises actually adopt AI tooling
+- **Trust Dashboard** demonstrates the observability layer that enterprise customers need
+- **Cost tracking** (ACU analysis, ROI calculation) speaks the language of engineering managers
+- **Parallel session management** shows understanding of the Devin API's concurrency model
+
+Feel free to fork this repo, learn from it, or build something completely different. Good luck.
+
+---
+
+MIT License — Built by [David Hsu](https://github.com/minatoplanb)
